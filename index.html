@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>毕设冲冲冲 🚀</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --primary: #6C5CE7;
+  --primary-light: #A29BFE;
+  --success: #00B894;
+  --warning: #FDCB6E;
+  --danger: #FF7675;
+  --bg: #F8F9FF;
+  --card: #FFFFFF;
+  --text: #2D3436;
+  --text-light: #636E72;
+  --border: #E8ECF1;
+  --shadow: 0 2px 12px rgba(108, 92, 231, 0.08);
+  --radius: 12px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ===== Login Page ===== */
+.login-container {
+  display: flex; justify-content: center; align-items: center;
+  min-height: 100vh; padding: 20px;
+  background: linear-gradient(135deg, #6C5CE7 0%, #A29BFE 50%, #FD79A8 100%);
+}
+
+.login-card {
+  background: var(--card);
+  border-radius: 20px;
+  padding: 48px 40px;
+  width: 100%; max-width: 440px;
+  box-shadow: 0 20px 60px rgba(108, 92, 231, 0.3);
+  text-align: center;
+}
+
+.login-emoji { font-size: 56px; margin-bottom: 12px; }
+.login-title { font-size: 26px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+.login-subtitle { font-size: 14px; color: var(--text-light); margin-bottom: 32px; }
+
+.login-tabs { display: flex; gap: 0; margin-bottom: 28px; border-radius: 10px; overflow: hidden; border: 2px solid var(--border); }
+.login-tab {
+  flex: 1; padding: 10px; cursor: pointer; font-size: 14px; font-weight: 600;
+  background: #F8F9FF; color: var(--text-light); transition: all 0.2s;
+  border: none; outline: none;
+}
+.login-tab.active { background: var(--primary); color: #fff; }
+
+.form-group { margin-bottom: 16px; text-align: left; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+.form-group input, .form-group textarea {
+  width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: 10px;
+  font-size: 15px; outline: none; transition: border-color 0.2s; font-family: inherit;
+}
+.form-group input:focus, .form-group textarea:focus { border-color: var(--primary); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 12px 24px; border-radius: 10px; font-size: 15px; font-weight: 700;
+  border: none; cursor: pointer; transition: all 0.2s; font-family: inherit;
+}
+.btn-primary { background: var(--primary); color: #fff; width: 100%; }
+.btn-primary:hover { background: #5B4BD5; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(108, 92, 231, 0.3); }
+.btn-outline { background: #fff; color: var(--primary); border: 2px solid var(--primary); }
+.btn-outline:hover { background: #F8F7FF; }
+.btn-sm { padding: 8px 16px; font-size: 13px; border-radius: 8px; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: #00A884; }
+.btn-warning { background: var(--warning); color: #2D3436; }
+.btn-warning:hover { background: #FDC040; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #E06060; }
+
+.error-msg { color: var(--danger); font-size: 13px; margin-top: 8px; display: none; }
+
+/* ===== Main App ===== */
+.app-container { max-width: 900px; margin: 0 auto; padding: 20px; }
+.hidden { display: none !important; }
+
+/* Header */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); margin-bottom: 20px;
+}
+.header-left { display: flex; align-items: center; gap: 12px; }
+.header-emoji { font-size: 32px; }
+.header-title { font-size: 20px; font-weight: 800; color: var(--primary); }
+.header-subtitle { font-size: 12px; color: var(--text-light); }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.user-badge { background: #F0EDFF; color: var(--primary); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+.admin-badge { background: #FFF3E0; color: #E17055; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+/* Stats Bar */
+.stats-bar {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;
+}
+.stat-card {
+  background: var(--card); border-radius: var(--radius); padding: 18px 20px;
+  box-shadow: var(--shadow); text-align: center;
+}
+.stat-value { font-size: 32px; font-weight: 800; }
+.stat-label { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+.stat-card.purple .stat-value { color: var(--primary); }
+.stat-card.green .stat-value { color: var(--success); }
+.stat-card.orange .stat-value { color: #E17055; }
+
+/* Main Content */
+.main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+
+.card {
+  background: var(--card); border-radius: var(--radius); padding: 24px;
+  box-shadow: var(--shadow);
+}
+.card-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+.card-title .icon { font-size: 20px; }
+
+/* Check-in Form */
+.checkin-form textarea {
+  width: 100%; padding: 12px 16px; border: 2px solid var(--border); border-radius: 10px;
+  font-size: 14px; outline: none; resize: vertical; min-height: 80px; font-family: inherit;
+  transition: border-color 0.2s;
+}
+.checkin-form textarea:focus { border-color: var(--primary); }
+.checkin-form .form-group { margin-bottom: 12px; }
+.checkin-status { margin-top: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; }
+.checkin-status.done { background: #E6FFF8; color: var(--success); }
+.checkin-status.pending { background: #FFF8E1; color: #E17055; }
+
+/* Members */
+.member-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.member-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;
+  background: #F0EDFF; color: var(--primary);
+}
+.member-tag .dot { width: 8px; height: 8px; border-radius: 50%; }
+.member-tag .dot.checked { background: var(--success); }
+.member-tag .dot.unchecked { background: var(--warning); }
+
+.invite-box { background: #F8F9FF; border-radius: 10px; padding: 16px; text-align: center; }
+.invite-code { font-size: 28px; font-weight: 800; letter-spacing: 6px; color: var(--primary); margin: 8px 0; }
+.invite-hint { font-size: 12px; color: var(--text-light); }
+
+/* Records */
+.record-list { max-height: 480px; overflow-y: auto; }
+.record-item {
+  padding: 14px 16px; border-left: 3px solid var(--primary-light); margin-bottom: 10px;
+  background: #FAFBFF; border-radius: 0 8px 8px 0;
+}
+.record-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.record-author { font-weight: 700; font-size: 14px; color: var(--primary); }
+.record-time { font-size: 11px; color: var(--text-light); }
+.record-done, .record-plan { font-size: 13px; color: var(--text); margin-bottom: 4px; }
+.record-done strong, .record-plan strong { color: var(--text-light); font-size: 11px; }
+
+/* Week Selector */
+.week-selector { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.week-selector select { padding: 8px 12px; border: 2px solid var(--border); border-radius: 8px; font-size: 13px; outline: none; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  display: flex; justify-content: center; align-items: center; z-index: 100;
+}
+.modal {
+  background: var(--card); border-radius: 16px; padding: 32px; width: 90%; max-width: 700px;
+  max-height: 80vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+.modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light); }
+.modal-body { white-space: pre-wrap; font-size: 14px; line-height: 1.8; }
+.modal-body h3 { color: var(--primary); margin: 16px 0 8px; font-size: 15px; }
+.modal-body .day-block { margin-bottom: 16px; padding: 12px; background: #FAFBFF; border-radius: 8px; }
+.modal-body .day-date { font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+.modal-footer { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+/* Export dropdown */
+.export-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Responsive */
+@media (max-width: 700px) {
+  .main-grid { grid-template-columns: 1fr; }
+  .stats-bar { grid-template-columns: repeat(3, 1fr); }
+  .header { flex-direction: column; gap: 10px; text-align: center; }
+  .login-card { padding: 32px 24px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ==================== Login Page ==================== -->
+<div id="loginPage" class="login-container">
+  <div class="login-card">
+    <div class="login-emoji">🎓</div>
+    <div class="login-title">毕设冲冲冲</div>
+    <div class="login-subtitle">一起推进毕设，每天进步一点点！</div>
+
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="switchLoginTab('create')">🔧 创建小组</button>
+      <button class="login-tab" onclick="switchLoginTab('join')">👋 加入小组</button>
+    </div>
+
+    <!-- Create Group -->
+    <div id="createForm">
+      <div class="form-group">
+        <label>你的昵称</label>
+        <input type="text" id="createNickname" placeholder="比如：张三" maxlength="20">
+      </div>
+      <div class="form-group">
+        <label>设置邀请码</label>
+        <input type="text" id="createInviteCode" placeholder="4-10位数字或字母" maxlength="10">
+      </div>
+      <button class="btn btn-primary" onclick="createGroup()">🎯 创建我的毕设小组</button>
+      <div class="error-msg" id="createError"></div>
+    </div>
+
+    <!-- Join Group -->
+    <div id="joinForm" class="hidden">
+      <div class="form-group">
+        <label>你的昵称</label>
+        <input type="text" id="joinNickname" placeholder="比如：李四" maxlength="20">
+      </div>
+      <div class="form-group">
+        <label>邀请码</label>
+        <input type="text" id="joinInviteCode" placeholder="输入组长给的邀请码" maxlength="10">
+      </div>
+      <button class="btn btn-primary" onclick="joinGroup()">🚀 加入毕设小组</button>
+      <div class="error-msg" id="joinError"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== Main App ==================== -->
+<div id="mainApp" class="app-container hidden">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <span class="header-emoji">🎓</span>
+      <div>
+        <div class="header-title">毕设冲冲冲</div>
+        <div class="header-subtitle" id="groupInfo"></div>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="user-badge" id="userBadge"></span>
+      <span class="admin-badge hidden" id="adminBadge">组长</span>
+      <button class="btn btn-outline btn-sm" onclick="logout()">退出</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card purple">
+      <div class="stat-value" id="statMembers">0</div>
+      <div class="stat-label">小组成员</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-value" id="statToday">0</div>
+      <div class="stat-label">今日已打卡</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-value" id="statTotal">0</div>
+      <div class="stat-label">总打卡次数</div>
+    </div>
+  </div>
+
+  <!-- Main Grid -->
+  <div class="main-grid">
+    <!-- Left: Check-in + Members -->
+    <div>
+      <!-- Check-in Card -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="card-title"><span class="icon">✍️</span> 每日打卡</div>
+        <div class="checkin-form" id="checkinForm">
+          <div class="form-group">
+            <label>📝 今日完成了什么？</label>
+            <textarea id="todayDone" placeholder="写写今天毕设做了什么吧..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>🎯 明天的计划？</label>
+            <textarea id="tomorrowPlan" placeholder="明天打算做什么呢？"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="submitCheckin()">✅ 提交打卡</button>
+        </div>
+        <div class="checkin-status hidden" id="checkinStatus"></div>
+      </div>
+
+      <!-- Members Card -->
+      <div class="card">
+        <div class="card-title"><span class="icon">👥</span> 小组成员</div>
+        <div class="member-list" id="memberList"></div>
+        <div class="invite-box" id="inviteBox">
+          <div class="invite-hint">邀请码</div>
+          <div class="invite-code" id="inviteCodeDisplay"></div>
+          <div class="invite-hint">分享给组员，让大家加入吧！</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Records -->
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> 打卡记录</div>
+      <div class="week-selector">
+        <label style="font-size:13px;font-weight:600;">📅 筛选日期：</label>
+        <input type="date" id="filterDate" onchange="loadRecords()" style="padding:8px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none;">
+        <button class="btn btn-outline btn-sm" onclick="clearFilter()">显示全部</button>
+      </div>
+      <div class="record-list" id="recordList">
+        <div style="text-align:center;color:var(--text-light);padding:40px;">暂无打卡记录，快来打卡吧！</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Actions -->
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;">
+    <button class="btn btn-warning" onclick="openWeeklyReport()">📊 生成周报</button>
+    <button class="btn btn-outline" onclick="exportData('json')">📥 导出 JSON</button>
+    <button class="btn btn-outline" onclick="exportData('csv')">📥 导出 CSV</button>
+  </div>
+</div>
+
+<!-- ==================== Weekly Report Modal ==================== -->
+<div id="reportModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">
+      <span>📊 周报生成</span>
+      <button class="modal-close" onclick="closeReport()">&times;</button>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:13px;font-weight:600;">选择周：</label>
+      <input type="week" id="reportWeek" onchange="generateReport()" style="padding:8px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;outline:none;margin-left:8px;">
+    </div>
+    <div class="modal-body" id="reportContent">
+      <div style="text-align:center;color:var(--text-light);padding:40px;">选择一周来生成周报</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeReport()">关闭</button>
+      <button class="btn btn-primary" id="downloadReportBtn" onclick="downloadReport()" disabled>📥 下载周报 (.md)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== Supabase Config ====================
+// TODO: 替换为你的 Supabase 项目信息
+const SUPABASE_URL = 'https://mwtycmphzydkytriesme.supabase.co';
+const SUPABASE_ANON_KEY = 'Zhang@2002000';
+
+let supabaseClient;
+let currentUser = null;  // { id, nickname, is_admin }
+let currentGroup = null; // { id, invite_code }
+let allMembers = [];
+let allRecords = [];
+
+// ==================== Init ====================
+function initSupabase() {
+  if (SUPABASE_URL && !SUPABASE_URL.includes('your-project-id')) {
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+}
+
+// ==================== Login Tabs ====================
+function switchLoginTab(tab) {
+  document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+  if (tab === 'create') {
+    document.querySelectorAll('.login-tab')[0].classList.add('active');
+    document.getElementById('createForm').classList.remove('hidden');
+    document.getElementById('joinForm').classList.add('hidden');
+  } else {
+    document.querySelectorAll('.login-tab')[1].classList.add('active');
+    document.getElementById('joinForm').classList.remove('hidden');
+    document.getElementById('createForm').classList.add('hidden');
+  }
+  document.getElementById('createError').style.display = 'none';
+  document.getElementById('joinError').style.display = 'none';
+}
+
+// ==================== Create Group ====================
+async function createGroup() {
+  const nickname = document.getElementById('createNickname').value.trim();
+  const inviteCode = document.getElementById('createInviteCode').value.trim();
+  const errorEl = document.getElementById('createError');
+
+  if (!nickname) { showError(errorEl, '请输入昵称'); return; }
+  if (!inviteCode || inviteCode.length < 4) { showError(errorEl, '邀请码至少4位'); return; }
+
+  // Check if invite code already used
+  const { data: existing } = await supabaseClient.from('groups').select('*').eq('invite_code', inviteCode).single();
+  if (existing) { showError(errorEl, '该邀请码已被使用，请换一个'); return; }
+
+  // Create group
+  const { data: group, error: gErr } = await supabaseClient.from('groups').insert({
+    invite_code: inviteCode,
+    created_by: nickname
+  }).select().single();
+
+  if (gErr) { showError(errorEl, '创建失败：' + gErr.message); return; }
+
+  // Create admin member
+  const { data: member, error: mErr } = await supabaseClient.from('members').insert({
+    group_id: group.id,
+    nickname: nickname,
+    is_admin: true
+  }).select().single();
+
+  if (mErr) { showError(errorEl, '创建成员失败：' + mErr.message); return; }
+
+  // Save to localStorage
+  saveSession(group, member);
+  enterApp();
+}
+
+// ==================== Join Group ====================
+async function joinGroup() {
+  const nickname = document.getElementById('joinNickname').value.trim();
+  const inviteCode = document.getElementById('joinInviteCode').value.trim();
+  const errorEl = document.getElementById('joinError');
+
+  if (!nickname) { showError(errorEl, '请输入昵称'); return; }
+  if (!inviteCode) { showError(errorEl, '请输入邀请码'); return; }
+
+  // Find group
+  const { data: group, error: gErr } = await supabaseClient.from('groups').select('*').eq('invite_code', inviteCode).single();
+  if (gErr || !group) { showError(errorEl, '邀请码无效，找不到对应小组'); return; }
+
+  // Check duplicate nickname in same group
+  const { data: existingMember } = await supabaseClient.from('members').select('*').eq('group_id', group.id).eq('nickname', nickname).single();
+  if (existingMember) { showError(errorEl, '该昵称已被使用，请换一个'); return; }
+
+  // Check member count
+  const { count } = await supabaseClient.from('members').select('*', { count: 'exact', head: true }).eq('group_id', group.id);
+  if (count >= 10) { showError(errorEl, '小组已满（最多10人）'); return; }
+
+  // Create member
+  const { data: member, error: mErr } = await supabaseClient.from('members').insert({
+    group_id: group.id,
+    nickname: nickname,
+    is_admin: false
+  }).select().single();
+
+  if (mErr) { showError(errorEl, '加入失败：' + mErr.message); return; }
+
+  saveSession(group, member);
+  enterApp();
+}
+
+// ==================== Session Management ====================
+function saveSession(group, member) {
+  const session = {
+    groupId: group.id,
+    memberId: member.id,
+    nickname: member.nickname,
+    isAdmin: member.is_admin
+  };
+  localStorage.setItem('bisishe_session', JSON.stringify(session));
+}
+
+function loadSession() {
+  const raw = localStorage.getItem('bisishe_session');
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
+function clearSession() {
+  localStorage.removeItem('bisishe_session');
+}
+
+function logout() {
+  clearSession();
+  location.reload();
+}
+
+// ==================== Enter App ====================
+async function enterApp() {
+  const session = loadSession();
+  if (!session) return;
+
+  currentUser = { id: session.memberId, nickname: session.nickname, is_admin: session.isAdmin };
+
+  // Load group
+  const { data: group } = await supabaseClient.from('groups').select('*').eq('id', session.groupId).single();
+  if (!group) { clearSession(); location.reload(); return; }
+  currentGroup = group;
+
+  // Show app
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+
+  // Update UI
+  document.getElementById('userBadge').textContent = '👤 ' + currentUser.nickname;
+  document.getElementById('groupInfo').textContent = '邀请码：' + currentGroup.invite_code;
+  if (currentUser.is_admin) {
+    document.getElementById('adminBadge').classList.remove('hidden');
+  }
+  document.getElementById('inviteCodeDisplay').textContent = currentGroup.invite_code;
+
+  await Promise.all([loadMembers(), loadRecords(), checkTodayCheckin()]);
+  updateStats();
+}
+
+// ==================== Load Data ====================
+async function loadMembers() {
+  const { data } = await supabaseClient.from('members').select('*').eq('group_id', currentGroup.id).order('created_at');
+  allMembers = data || [];
+  renderMembers();
+}
+
+async function loadRecords() {
+  let query = supabaseClient.from('records').select('*').eq('group_id', currentGroup.id).order('created_at', { ascending: false });
+
+  const filterDate = document.getElementById('filterDate').value;
+  if (filterDate) {
+    query = query.eq('check_date', filterDate);
+  }
+
+  const { data } = await query;
+  allRecords = data || [];
+  renderRecords();
+}
+
+async function checkTodayCheckin() {
+  const today = getTodayStr();
+  const { data } = await supabaseClient.from('records').select('*').eq('group_id', currentGroup.id).eq('member_id', currentUser.id).eq('check_date', today).single();
+
+  const statusEl = document.getElementById('checkinStatus');
+  const formEl = document.getElementById('checkinForm');
+
+  if (data) {
+    formEl.classList.add('hidden');
+    statusEl.classList.remove('hidden');
+    statusEl.className = 'checkin-status done';
+    statusEl.innerHTML = '✅ 今日已打卡！<br><small>' + new Date(data.created_at).toLocaleTimeString('zh-CN') + '</small>';
+    document.getElementById('todayDone').value = data.today_done;
+    document.getElementById('tomorrowPlan').value = data.tomorrow_plan;
+  } else {
+    formEl.classList.remove('hidden');
+    statusEl.classList.add('hidden');
+  }
+}
+
+// ==================== Submit Checkin ====================
+async function submitCheckin() {
+  const todayDone = document.getElementById('todayDone').value.trim();
+  const tomorrowPlan = document.getElementById('tomorrowPlan').value.trim();
+
+  if (!todayDone) { alert('请填写「今日完成」'); return; }
+  if (!tomorrowPlan) { alert('请填写「明日计划」'); return; }
+
+  const today = getTodayStr();
+  const { error } = await supabaseClient.from('records').insert({
+    group_id: currentGroup.id,
+    member_id: currentUser.id,
+    nickname: currentUser.nickname,
+    check_date: today,
+    today_done: todayDone,
+    tomorrow_plan: tomorrowPlan
+  });
+
+  if (error) { alert('打卡失败：' + error.message); return; }
+
+  document.getElementById('todayDone').value = '';
+  document.getElementById('tomorrowPlan').value = '';
+  await Promise.all([loadRecords(), checkTodayCheckin()]);
+  updateStats();
+}
+
+// ==================== Render ====================
+function renderMembers() {
+  const container = document.getElementById('memberList');
+  if (allMembers.length === 0) {
+    container.innerHTML = '<div style="color:var(--text-light);font-size:13px;">暂无成员</div>';
+    return;
+  }
+
+  const today = getTodayStr();
+  const todayRecordMemberIds = new Set(
+    allRecords.filter(r => r.check_date === today).map(r => r.member_id)
+  );
+
+  container.innerHTML = allMembers.map(m => {
+    const checked = todayRecordMemberIds.has(m.id);
+    const dotClass = checked ? 'checked' : 'unchecked';
+    const adminMark = m.is_admin ? ' 👑' : '';
+    return `<span class="member-tag">
+      <span class="dot ${dotClass}"></span>${m.nickname}${adminMark}
+    </span>`;
+  }).join('');
+}
+
+function renderRecords() {
+  const container = document.getElementById('recordList');
+  if (allRecords.length === 0) {
+    container.innerHTML = '<div style="text-align:center;color:var(--text-light);padding:40px;">暂无打卡记录，快来打卡吧！</div>';
+    return;
+  }
+
+  container.innerHTML = allRecords.map(r => `
+    <div class="record-item">
+      <div class="record-header">
+        <span class="record-author">${r.nickname}</span>
+        <span class="record-time">📅 ${r.check_date} ${new Date(r.created_at).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})}</span>
+      </div>
+      <div class="record-done"><strong>✅ 今日完成：</strong>${escapeHtml(r.today_done)}</div>
+      <div class="record-plan"><strong>🎯 明日计划：</strong>${escapeHtml(r.tomorrow_plan)}</div>
+    </div>
+  `).join('');
+}
+
+function updateStats() {
+  const today = getTodayStr();
+  const todayChecked = new Set(allRecords.filter(r => r.check_date === today).map(r => r.member_id));
+  document.getElementById('statMembers').textContent = allMembers.length;
+  document.getElementById('statToday').textContent = todayChecked.size;
+  document.getElementById('statTotal').textContent = allRecords.length;
+}
+
+function clearFilter() {
+  document.getElementById('filterDate').value = '';
+  loadRecords();
+}
+
+// ==================== Weekly Report ====================
+function openWeeklyReport() {
+  document.getElementById('reportModal').classList.remove('hidden');
+  // Set default week to current week
+  const now = new Date();
+  const year = now.getFullYear();
+  const weekNum = getWeekNumber(now);
+  document.getElementById('reportWeek').value = `${year}-W${String(weekNum).padStart(2, '0')}`;
+  generateReport();
+}
+
+function closeReport() {
+  document.getElementById('reportModal').classList.add('hidden');
+}
+
+async function generateReport() {
+  const weekVal = document.getElementById('reportWeek').value;
+  if (!weekVal) return;
+
+  const [year, weekStr] = weekVal.split('-W');
+  const weekNum = parseInt(weekStr);
+
+  // Calculate week range
+  const weekStart = getDateFromWeek(year, weekNum);
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    dates.push(formatDate(d));
+  }
+
+  // Load all records for this week
+  const { data: weekRecords } = await supabaseClient.from('records').select('*').eq('group_id', currentGroup.id).in('check_date', dates).order('check_date').order('created_at');
+
+  const contentEl = document.getElementById('reportContent');
+  const downloadBtn = document.getElementById('downloadReportBtn');
+
+  if (!weekRecords || weekRecords.length === 0) {
+    contentEl.innerHTML = '<div style="text-align:center;color:var(--text-light);padding:40px;">本周暂无打卡记录</div>';
+    downloadBtn.disabled = true;
+    return;
+  }
+
+  // Group by member
+  const byMember = {};
+  weekRecords.forEach(r => {
+    if (!byMember[r.nickname]) byMember[r.nickname] = [];
+    byMember[r.nickname].push(r);
+  });
+
+  const dateRange = `${dates[0]} ~ ${dates[6]}`;
+  let md = `# 📊 毕设进度周报\n\n**时间**：${dateRange}\n**小组**：邀请码 ${currentGroup.invite_code}\n**总打卡次数**：${weekRecords.length}\n\n---\n\n`;
+
+  let html = `<h3>📅 ${dateRange}</h3>`;
+
+  for (const [name, records] of Object.entries(byMember)) {
+    md += `## ${name}\n\n`;
+    html += `<h3>👤 ${name}</h3>`;
+    records.forEach(r => {
+      md += `### ${r.check_date}\n- **今日完成**：${r.today_done}\n- **明日计划**：${r.tomorrow_plan}\n\n`;
+      html += `<div class="day-block"><div class="day-date">📅 ${r.check_date}</div><div>✅ <strong>今日完成：</strong>${escapeHtml(r.today_done)}</div><div>🎯 <strong>明日计划：</strong>${escapeHtml(r.tomorrow_plan)}</div></div>`;
+    });
+    md += `---\n\n`;
+  }
+
+  contentEl.innerHTML = html;
+  downloadBtn.disabled = false;
+
+  // Store md for download
+  contentEl.dataset.md = md;
+}
+
+function downloadReport() {
+  const md = document.getElementById('reportContent').dataset.md;
+  if (!md) return;
+  const weekVal = document.getElementById('reportWeek').value;
+  downloadFile(`毕设周报_${weekVal}.md`, md, 'text/markdown');
+}
+
+// ==================== Export ====================
+async function exportData(format) {
+  const { data: allData } = await supabaseClient.from('records').select('*').eq('group_id', currentGroup.id).order('check_date').order('created_at');
+
+  if (!allData || allData.length === 0) {
+    alert('暂无数据可导出');
+    return;
+  }
+
+  if (format === 'json') {
+    const json = JSON.stringify(allData, null, 2);
+    downloadFile('毕设打卡数据.json', json, 'application/json');
+  } else if (format === 'csv') {
+    const header = '昵称,日期,今日完成,明日计划,打卡时间\n';
+    const rows = allData.map(r => {
+      const todayDone = `"${(r.today_done || '').replace(/"/g, '""')}"`;
+      const tomorrowPlan = `"${(r.tomorrow_plan || '').replace(/"/g, '""')}"`;
+      return `${r.nickname},${r.check_date},${todayDone},${tomorrowPlan},${r.created_at}`;
+    }).join('\n');
+    downloadFile('毕设打卡数据.csv', '\uFEFF' + header + rows, 'text/csv;charset=utf-8');
+  }
+}
+
+// ==================== Helpers ====================
+function showError(el, msg) {
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+function getTodayStr() {
+  return formatDate(new Date());
+}
+
+function formatDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function getWeekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+function getDateFromWeek(year, week) {
+  const jan1 = new Date(Date.UTC(year, 0, 1));
+  const dayOffset = jan1.getUTCDay() || 7;
+  const daysOffset = (week - 1) * 7 - dayOffset + 1 + 4;
+  const result = new Date(Date.UTC(year, 0, 1 + daysOffset));
+  // Adjust to Monday
+  const day = result.getUTCDay();
+  const diff = result.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(Date.UTC(year, result.getUTCMonth(), diff));
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function downloadFile(filename, content, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ==================== Boot ====================
+initSupabase();
+
+const savedSession = loadSession();
+if (savedSession && supabaseClient) {
+  // Try to restore session
+  supabaseClient.from('groups').select('*').eq('id', savedSession.groupId).single().then(({ data: group }) => {
+    if (group) {
+      supabaseClient.from('members').select('*').eq('id', savedSession.memberId).single().then(({ data: member }) => {
+        if (member) {
+          currentUser = { id: member.id, nickname: member.nickname, is_admin: member.is_admin };
+          currentGroup = group;
+          enterApp();
+        }
+      });
+    }
+  });
+}
+
+</script>
+
+<!-- ==================== Database Setup Instructions ==================== -->
+<div id="setupGuide" style="display:none;max-width:700px;margin:40px auto;padding:32px;background:#fff;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.1);">
+  <h2 style="color:#6C5CE7;margin-bottom:16px;">⚙️ Supabase 数据库配置指南</h2>
+  <p style="margin-bottom:20px;">在使用之前，需要在 Supabase 中创建以下数据表。请按步骤操作：</p>
+
+  <h3 style="margin-bottom:8px;">1️⃣ 创建 Supabase 项目</h3>
+  <p style="margin-bottom:16px;">访问 <a href="https://supabase.com" target="_blank">supabase.com</a>，注册并创建免费项目。</p>
+
+  <h3 style="margin-bottom:8px;">2️⃣ 获取配置信息</h3>
+  <p style="margin-bottom:16px;">在项目设置 → API 中，复制 <strong>Project URL</strong> 和 <strong>anon public key</strong>，替换上方代码中的 <code>SUPABASE_URL</code> 和 <code>SUPABASE_ANON_KEY</code>。</p>
+
+  <h3 style="margin-bottom:8px;">3️⃣ 创建数据表（在 SQL Editor 中执行）</h3>
+  <pre style="background:#1E1E2E;color:#CDD6F4;padding:20px;border-radius:10px;overflow-x:auto;font-size:13px;line-height:1.5;margin-bottom:16px;">
+-- Groups table
+CREATE TABLE groups (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  invite_code TEXT UNIQUE NOT NULL,
+  created_by TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Members table
+CREATE TABLE members (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+  nickname TEXT NOT NULL,
+  is_admin BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Records table
+CREATE TABLE records (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+  member_id UUID REFERENCES members(id) ON DELETE CASCADE,
+  nickname TEXT NOT NULL,
+  check_date DATE NOT NULL,
+  today_done TEXT NOT NULL,
+  tomorrow_plan TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable RLS but allow all for simplicity (10-person group)
+ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE records ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all on groups" ON groups FOR ALL USING (true);
+CREATE POLICY "Allow all on members" ON members FOR ALL USING (true);
+CREATE POLICY "Allow all on records" ON records FOR ALL USING (true);
+  </pre>
+
+  <h3 style="margin-bottom:8px;">4️⃣ 修改配置并启动</h3>
+  <p>将上面的 SQL 在 Supabase SQL Editor 中执行，然后修改本文件顶部的 <code>SUPABASE_URL</code> 和 <code>SUPABASE_ANON_KEY</code>，即可开始使用！</p>
+</div>
+
+<script>
+// Show setup guide if Supabase is not configured
+if (!SUPABASE_URL.includes('your-project-id')) {
+  document.getElementById('loginPage').classList.add('hidden');
+  document.getElementById('setupGuide').style.display = 'block';
+}
+</script>
+
+</body>
+</html>
