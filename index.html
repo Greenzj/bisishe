@@ -920,7 +920,7 @@ CREATE POLICY "Allow all on records" ON records FOR ALL USING (true);
 
 <script>
 // Show setup guide if Supabase is not configured
-if (!SUPABASE_URL.includes('your-project-id')) {
+if (SUPABASE_URL.includes('your-project-id')) {
   document.getElementById('loginPage').classList.add('hidden');
   document.getElementById('setupGuide').style.display = 'block';
 }
