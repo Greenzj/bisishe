@@ -385,6 +385,10 @@ async function api(method, table, options = {}) {
   if (order) {
     parts.push(`order=${encodeURIComponent(order)}.${ascending !== false ? 'asc' : 'desc'}`);
   }
+  // For POST/PATCH, request the full row back
+  if (method === 'POST' || method === 'PATCH') {
+    parts.push('select=*');
+  }
 
   if (parts.length) url += '?' + parts.join('&');
 
@@ -395,6 +399,10 @@ async function api(method, table, options = {}) {
   };
 
   if (count) headers['Prefer'] = 'count=exact';
+  // Return the inserted/updated row for POST/PATCH
+  if (method === 'POST' || method === 'PATCH') {
+    headers['Prefer'] = 'return=representation';
+  }
 
   const fetchOptions = { method, headers };
   if (data) fetchOptions.body = JSON.stringify(data);
