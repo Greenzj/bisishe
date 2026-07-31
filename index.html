@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>毕设冲冲冲 🚀</title>
-<script src="https://esm.sh/@supabase/supabase-js@2?bundle&exports=createClient"></script>
+<!-- 不使用CDN SDK，直接用REST API避免兼容性问题 -->
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -357,21 +357,66 @@ body {
 
 <script>
 // ==================== Supabase Config ====================
-// TODO: 替换为你的 Supabase 项目信息
-const SUPABASE_URL = 'https://mwtycmphzydkytriesme.supabase.co/rest/v1/';
+const SUPABASE_URL = 'https://mwtycmphzydkytriesme.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_D3JmBRRnXlNNro39q8vRyg_HkPmtzDT';
+const API_BASE = SUPABASE_URL + '/rest/v1';
 
-let supabaseClient;
 let currentUser = null;  // { id, nickname, is_admin }
 let currentGroup = null; // { id, invite_code }
 let allMembers = [];
 let allRecords = [];
 
-// ==================== Init ====================
-function initSupabase() {
-  if (SUPABASE_URL && !SUPABASE_URL.includes('your-project-id')) {
-    supabaseClient = window.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// ==================== API Helper (uses native fetch, no SDK needed) ====================
+async function api(method, table, options = {}) {
+  const { select, eq, inCol, inVals, order, ascending, single, data, count } = options;
+  let url = `${API_BASE}/${table}`;
+
+  // Build query params manually (avoid URLSearchParams encoding issues)
+  const parts = [];
+  if (select) parts.push(`select=${encodeURIComponent(select)}`);
+  if (eq) {
+    for (const [col, val] of Object.entries(eq)) {
+      parts.push(`${encodeURIComponent(col)}=eq.${encodeURIComponent(val)}`);
+    }
   }
+  if (inCol && inVals) {
+    parts.push(`${encodeURIComponent(inCol)}=in.(${inVals.map(v => encodeURIComponent(v)).join(',')})`);
+  }
+  if (order) {
+    parts.push(`order=${encodeURIComponent(order)}.${ascending !== false ? 'asc' : 'desc'}`);
+  }
+
+  if (parts.length) url += '?' + parts.join('&');
+
+  const headers = {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+    'Content-Type': 'application/json'
+  };
+
+  if (count) headers['Prefer'] = 'count=exact';
+
+  const fetchOptions = { method, headers };
+  if (data) fetchOptions.body = JSON.stringify(data);
+
+  const res = await fetch(url, fetchOptions);
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(errText || `HTTP ${res.status}`);
+  }
+
+  if (count) {
+    const rangeHeader = res.headers.get('content-range');
+    const total = rangeHeader ? parseInt(rangeHeader.split('/')[1]) : 0;
+    return { data: await res.json().catch(() => []), count: total };
+  }
+
+  const result = await res.json().catch(() => []);
+  if (single) {
+    return { data: Array.isArray(result) ? result[0] || null : result };
+  }
+  return { data: Array.isArray(result) ? result : [result] };
 }
 
 // ==================== Login Tabs ====================
@@ -400,25 +445,24 @@ async function createGroup() {
   if (!inviteCode || inviteCode.length < 4) { showError(errorEl, '邀请码至少4位'); return; }
 
   // Check if invite code already used
-  const { data: existing } = await supabaseClient.from('groups').select('*').eq('invite_code', inviteCode).single();
+  const { data: existing } = await api('GET', 'groups', { eq: { invite_code: inviteCode }, single: true });
   if (existing) { showError(errorEl, '该邀请码已被使用，请换一个'); return; }
 
   // Create group
-  const { data: group, error: gErr } = await supabaseClient.from('groups').insert({
-    invite_code: inviteCode,
-    created_by: nickname
-  }).select().single();
+  const { data: group } = await api('POST', 'groups', {
+    data: { invite_code: inviteCode, created_by: nickname },
+    single: true
+  });
 
-  if (gErr) { showError(errorEl, '创建失败：' + gErr.message); return; }
+  if (!group) { showError(errorEl, '创建失败'); return; }
 
   // Create admin member
-  const { data: member, error: mErr } = await supabaseClient.from('members').insert({
-    group_id: group.id,
-    nickname: nickname,
-    is_admin: true
-  }).select().single();
+  const { data: member } = await api('POST', 'members', {
+    data: { group_id: group.id, nickname: nickname, is_admin: true },
+    single: true
+  });
 
-  if (mErr) { showError(errorEl, '创建成员失败：' + mErr.message); return; }
+  if (!member) { showError(errorEl, '创建成员失败'); return; }
 
   // Save to localStorage
   saveSession(group, member);
@@ -435,25 +479,24 @@ async function joinGroup() {
   if (!inviteCode) { showError(errorEl, '请输入邀请码'); return; }
 
   // Find group
-  const { data: group, error: gErr } = await supabaseClient.from('groups').select('*').eq('invite_code', inviteCode).single();
-  if (gErr || !group) { showError(errorEl, '邀请码无效，找不到对应小组'); return; }
+  const { data: group } = await api('GET', 'groups', { eq: { invite_code: inviteCode }, single: true });
+  if (!group) { showError(errorEl, '邀请码无效，找不到对应小组'); return; }
 
   // Check duplicate nickname in same group
-  const { data: existingMember } = await supabaseClient.from('members').select('*').eq('group_id', group.id).eq('nickname', nickname).single();
+  const { data: existingMember } = await api('GET', 'members', { eq: { group_id: group.id, nickname: nickname }, single: true });
   if (existingMember) { showError(errorEl, '该昵称已被使用，请换一个'); return; }
 
   // Check member count
-  const { count } = await supabaseClient.from('members').select('*', { count: 'exact', head: true }).eq('group_id', group.id);
+  const { count } = await api('GET', 'members', { eq: { group_id: group.id }, count: true });
   if (count >= 10) { showError(errorEl, '小组已满（最多10人）'); return; }
 
   // Create member
-  const { data: member, error: mErr } = await supabaseClient.from('members').insert({
-    group_id: group.id,
-    nickname: nickname,
-    is_admin: false
-  }).select().single();
+  const { data: member } = await api('POST', 'members', {
+    data: { group_id: group.id, nickname: nickname, is_admin: false },
+    single: true
+  });
 
-  if (mErr) { showError(errorEl, '加入失败：' + mErr.message); return; }
+  if (!member) { showError(errorEl, '加入失败'); return; }
 
   saveSession(group, member);
   enterApp();
@@ -493,7 +536,7 @@ async function enterApp() {
   currentUser = { id: session.memberId, nickname: session.nickname, is_admin: session.isAdmin };
 
   // Load group
-  const { data: group } = await supabaseClient.from('groups').select('*').eq('id', session.groupId).single();
+  const { data: group } = await api('GET', 'groups', { eq: { id: session.groupId }, single: true });
   if (!group) { clearSession(); location.reload(); return; }
   currentGroup = group;
 
@@ -515,27 +558,27 @@ async function enterApp() {
 
 // ==================== Load Data ====================
 async function loadMembers() {
-  const { data } = await supabaseClient.from('members').select('*').eq('group_id', currentGroup.id).order('created_at');
+  const { data } = await api('GET', 'members', { eq: { group_id: currentGroup.id }, order: 'created_at', ascending: true });
   allMembers = data || [];
   renderMembers();
 }
 
 async function loadRecords() {
-  let query = supabaseClient.from('records').select('*').eq('group_id', currentGroup.id).order('created_at', { ascending: false });
-
   const filterDate = document.getElementById('filterDate').value;
-  if (filterDate) {
-    query = query.eq('check_date', filterDate);
-  }
+  const eq = { group_id: currentGroup.id };
+  if (filterDate) eq.check_date = filterDate;
 
-  const { data } = await query;
+  const { data } = await api('GET', 'records', { eq, order: 'created_at', ascending: false });
   allRecords = data || [];
   renderRecords();
 }
 
 async function checkTodayCheckin() {
   const today = getTodayStr();
-  const { data } = await supabaseClient.from('records').select('*').eq('group_id', currentGroup.id).eq('member_id', currentUser.id).eq('check_date', today).single();
+  const { data } = await api('GET', 'records', {
+    eq: { group_id: currentGroup.id, member_id: currentUser.id, check_date: today },
+    single: true
+  });
 
   const statusEl = document.getElementById('checkinStatus');
   const formEl = document.getElementById('checkinForm');
@@ -562,16 +605,21 @@ async function submitCheckin() {
   if (!tomorrowPlan) { alert('请填写「明日计划」'); return; }
 
   const today = getTodayStr();
-  const { error } = await supabaseClient.from('records').insert({
-    group_id: currentGroup.id,
-    member_id: currentUser.id,
-    nickname: currentUser.nickname,
-    check_date: today,
-    today_done: todayDone,
-    tomorrow_plan: tomorrowPlan
-  });
-
-  if (error) { alert('打卡失败：' + error.message); return; }
+  try {
+    await api('POST', 'records', {
+      data: {
+        group_id: currentGroup.id,
+        member_id: currentUser.id,
+        nickname: currentUser.nickname,
+        check_date: today,
+        today_done: todayDone,
+        tomorrow_plan: tomorrowPlan
+      }
+    });
+  } catch (e) {
+    alert('打卡失败：' + e.message);
+    return;
+  }
 
   document.getElementById('todayDone').value = '';
   document.getElementById('tomorrowPlan').value = '';
@@ -666,7 +714,12 @@ async function generateReport() {
   }
 
   // Load all records for this week
-  const { data: weekRecords } = await supabaseClient.from('records').select('*').eq('group_id', currentGroup.id).in('check_date', dates).order('check_date').order('created_at');
+  const { data: weekRecords } = await api('GET', 'records', {
+    eq: { group_id: currentGroup.id },
+    inCol: 'check_date',
+    inVals: dates,
+    order: 'check_date'
+  });
 
   const contentEl = document.getElementById('reportContent');
   const downloadBtn = document.getElementById('downloadReportBtn');
@@ -715,7 +768,7 @@ function downloadReport() {
 
 // ==================== Export ====================
 async function exportData(format) {
-  const { data: allData } = await supabaseClient.from('records').select('*').eq('group_id', currentGroup.id).order('check_date').order('created_at');
+  const { data: allData } = await api('GET', 'records', { eq: { group_id: currentGroup.id }, order: 'check_date' });
 
   if (!allData || allData.length === 0) {
     alert('暂无数据可导出');
@@ -791,14 +844,12 @@ function downloadFile(filename, content, mimeType) {
 }
 
 // ==================== Boot ====================
-initSupabase();
-
 const savedSession = loadSession();
-if (savedSession && supabaseClient) {
+if (savedSession && SUPABASE_URL) {
   // Try to restore session
-  supabaseClient.from('groups').select('*').eq('id', savedSession.groupId).single().then(({ data: group }) => {
+  api('GET', 'groups', { eq: { id: savedSession.groupId }, single: true }).then(({ data: group }) => {
     if (group) {
-      supabaseClient.from('members').select('*').eq('id', savedSession.memberId).single().then(({ data: member }) => {
+      api('GET', 'members', { eq: { id: savedSession.memberId }, single: true }).then(({ data: member }) => {
         if (member) {
           currentUser = { id: member.id, nickname: member.nickname, is_admin: member.is_admin };
           currentGroup = group;
